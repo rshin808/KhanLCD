@@ -12,8 +12,8 @@ import csv
 from font import Font
 
 # PINS
-RS = 33
-RES = 32 
+RS = 32
+RES = 33 
 
 # ADDRESSES
 INDEX = 0x00
