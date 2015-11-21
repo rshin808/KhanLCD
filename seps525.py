@@ -1,3 +1,10 @@
+"""
+    File: seps525.py
+    By  : Reed Shinsato
+    Desc: This implements the class for the basic seps525 functions.
+"""
+
+# Libraries
 import spidev
 import time
 import RPi.GPIO as gpio
@@ -5,8 +12,8 @@ import csv
 from font import Font
 
 # PINS
-RS = 12
-RES = 8
+RS = 24
+RES = 25
 
 # ADDRESSES
 INDEX = 0x00
@@ -67,8 +74,13 @@ SCR2_SY1 = 0x49
 SCR2_SY2 = 0x4A
 
 class SEPS525_nhd:
-
-
+    """
+        Constructor
+        Param: WIDTH, The pixel width of the lcd.
+               HEIGHT, The pixel height of the lcd.
+               font, The font without spaces.
+               font2, The font with spaces.
+    """
     def __init__(self, WIDTH = 160, HEIGHT = 128, font = "font14h", font2 = "font14hL"):
 	    # Initialize gpio
         self.__setup_gpio()
@@ -79,27 +91,39 @@ class SEPS525_nhd:
         self.__seps525_init()
         self.__init_oled_display()
 	
+
+    """
+        This sets the gpio (and spi) for the SEPS525 driver.
+    """
     def __setup_gpio(self):
         global gpio
         global spi
-        gpio.setmode(gpio.BOARD)
+        gpio.setmode(gpio.BCM)
         gpio.setup(RES, gpio.OUT)
         gpio.output(RES, True)
         gpio.setup(RS, gpio.OUT)
         gpio.output(RS, False)
         time.sleep(0.1)
+
         
         spi = spidev.SpiDev()
-        spi.open(0, 1)
+        spi.open(0, 0)
         spi.max_speed_hz = 100000000
         spi.mode = 3
 
+    """
+        This cleans up the gpio and turns off the SEPS525 driver.
+    """
     def end_gpio(self):
         global gpio
         gpio.output(RES, True)
         gpio.cleanup()
         exit()
 
+
+    """
+        This initializes the SEPS525 driver.
+    """
     def __seps525_init(self):
         global gpio
         # Startup RS
@@ -180,10 +204,22 @@ class SEPS525_nhd:
     	# set RGB polarity
         self.seps525_reg(RGB_POL, 0x00)
 
+
+    """
+        This initializes the lcd dipslay to white.
+    """
     def __init_oled_display(self):
         self.fill_screen((0, 255))
         time.sleep(0.5)
 
+
+    """
+        This sets the region of the lcd to draw to.
+        Param: width1, The starting pixel width point. 
+               height1, The starting pixel height point.
+               width2, The end pixel width point.
+               height2, The end pixel height point.
+    """
     def seps525_set_region(self, width1 = 0, height1 = 0, width2 = 160, height2 = 128):
 	    # specify the update region
 	    # start on (width1, height1)
@@ -194,6 +230,12 @@ class SEPS525_nhd:
         self.seps525_reg(MEM_ACX, width1)
         self.seps525_reg(MEM_ACY, height1)
     
+
+    """
+        This writes data to the SEPS525 driver.
+        It is mainly for writing the pixel color data.
+        Param: value, The data to write.
+    """
     def data(self, value):
         global gpio
         global spi
@@ -202,6 +244,10 @@ class SEPS525_nhd:
         spi.xfer2(list(value))
         gpio.output(RS, False)
     
+
+    """
+        This writes the command address of display for the SEPS525 driver.
+    """
     def data_start(self):
         global gpio
         global spi
@@ -209,6 +255,12 @@ class SEPS525_nhd:
         spi.xfer([0x22])
         gpio.output(RS, True)
 
+    
+    """
+        This writes a value to a specified register address of the SEPS525 driver.
+        Param: address, The address of the register.
+               value, The value to write to the register.
+    """
     def seps525_reg(self, address, value):
         global gpio
         global spi
@@ -218,6 +270,11 @@ class SEPS525_nhd:
         gpio.output(RS, True)
         spi.xfer2([value])
 
+    
+    """
+        This fills the entire screen of the lcd with a color.
+        Param: color, The color to fill the screen with. 
+    """
     def fill_screen(self, color):
 	    # color = (c1, c2)
         self.seps525_set_region()
@@ -233,12 +290,27 @@ class SEPS525_nhd:
         for pixel in range(10):
 	        self.data(value)
 
+
+    """
+        This draws a pixel to the lcd.
+        Param: x, The x coordinate of the pixel.
+               y, The y coordinate of the pixel.
+               color, The color of the pixel.
+    """
     def draw_pixel(self, x, y, color):
 	    # color = (c1, c2)
 	    self.seps525_set_region(x, y, 1, 1)
 	    self.data_start()
 	    self.data(list(color))
 
+    
+    """
+        This draws a vertical line to the lcd.
+        Param: x, The start x coordinate of the line.
+               y, The start y coordinate of the line.
+               h, The height of the line.
+               color, The color of the line.
+    """
     def draw_vline(self, x, y, h, color):
 	    # color = (c1, c2)
         self.seps525_set_region(x, y, 1, h)
@@ -250,6 +322,14 @@ class SEPS525_nhd:
 	
         self.data(value)
 
+
+    """
+        This draws a horizontal line to the lcd.
+        Param: x, The start x coordinate of the line.
+               y, The start y coordinate of the line.
+               w, The width of the line.
+               color, The color of the line.
+    """
     def draw_hline(self, x, y, w, color):
 	    # color = (c1, c2)
         self.seps525_set_region(x, y, w, 1)
@@ -262,6 +342,16 @@ class SEPS525_nhd:
 
         self.data(value)
 
+
+    """
+        This draws a rectangle on the lcd.
+        Param: x, The start x coordinate of the rectangle.
+               y, The start y coordinate of the rectangle.
+               w, The width of the rectangle.
+               h, The height of the rectangle.
+               color, The color of the rectangle.
+               filled, Whether the rectangle is filled or not.
+    """
     def draw_rect(self, x, y, w, h, color, filled = True):
 	    # color = (c1, c2)
         if(filled):
@@ -279,6 +369,15 @@ class SEPS525_nhd:
             self.draw_hline(x, y + h, color)
             self.draw_vline(x + w, y, h, color)
     
+    
+    """
+        This draws a circle to the lcd.
+        Param: x, The x origin of the circle.
+               y, The y origin of the circle.
+               r, The radius of the circle.
+               color, The color of the circle.
+               filled, Whether the circle is filled or not.
+    """
     def draw_circle(self, x, y, r, color, filled = False):
 	    # color = (c1, c2)
         if(not filled):
@@ -306,8 +405,17 @@ class SEPS525_nhd:
                 self.draw_pixel((x - y1), (y - x1), color)
                 self.draw_pixel((x - y1), (y + x1), color)
    
+
+    """
+        This tells the SEPS525 driver to turn on the display.
+    """
     def show(self):
         self.seps525_reg(DISP_O_F, 0x01)
      
+
+    """
+        This tells the SEPS525 driver to turn off the display.
+    """
     def hide(self):
         self.seps525_reg(DISP_O_F, 0x00)
+

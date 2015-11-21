@@ -1,0 +1,14 @@
+import smbus
+import time
+import RPi.GPIO as gpio
+
+class AD5696:
+    def __init__(self, PINS, VREF = 5, RES = 12, ADDRESS = 0x0C):
+	self._VREF = VREF
+	self._RES = RES
+	self._ADDRESS = ADDRESS
+
+    def volt_to_int(self, volt):
+	conversion = 2 ** self._RES - 1
+	scalar = float(conversion) / float(self._VREF)
+	return int(volt * scalar)
